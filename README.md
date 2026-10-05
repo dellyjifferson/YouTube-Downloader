@@ -36,40 +36,76 @@ brew install python ffmpeg
 
 ## Installation
 
-### Option 1: Run from Source (Recommended for Development)
+The easiest way to install this app from the repository is to clone the repo and install it locally.
 
-1. Clone or download this repository
-2. Navigate to the project directory:
+### Option 1: Install from the repository (recommended)
+
+1. Clone the repository:
    ```bash
+   git clone https://github.com/your-username/youtube_downloader.git
    cd youtube_downloader
    ```
 
-3. Create a virtual environment:
+2. Create and activate a virtual environment:
    ```bash
    python -m venv .env
+   source .env/bin/activate
    ```
 
-4. Activate the virtual environment:
-   - On Linux/macOS:
-     ```bash
-     source .env/bin/activate
-     ```
-   - On Windows:
-     ```bash
-     .\.env\Scripts\activate
-     ```
-
-5. Install dependencies:
+3. Install the app:
    ```bash
-   pip install yt-dlp
+   pip install .
    ```
 
-6. Run the application:
+4. Launch the app:
    ```bash
-   python "YouTube downloader.py"
+   youtube_downloader
    ```
 
-### Option 2: Build Standalone Executable
+5. Check for updates:
+   ```bash
+   youtube_downloader_update
+   ```
+
+You can also run it directly without installing:
+
+```bash
+python -m youtube_downloader
+```
+
+### Option 2: Install as a Debian package
+
+If you want a system package on Debian/Ubuntu, build it from the repo:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y build-essential debhelper dh-python python3-all python3-setuptools python3-wheel python3-tk ffmpeg
+git clone https://github.com/your-username/youtube_downloader.git
+cd youtube_downloader
+dpkg-buildpackage -us -uc -b
+sudo dpkg -i ../youtube-downloader_0.1.0-1_all.deb
+```
+
+Then run:
+
+```bash
+youtube_downloader
+```
+
+### Option 3: Run directly from source
+
+If you only want to run the project from the repo without installing it:
+
+```bash
+git clone https://github.com/your-username/youtube_downloader.git
+cd youtube_downloader
+python -m venv .env
+source .env/bin/activate
+pip install yt-dlp
+python "YouTube downloader.py"
+```
+
+### Option 4: Build a standalone executable
 
 #### Linux
 ```bash

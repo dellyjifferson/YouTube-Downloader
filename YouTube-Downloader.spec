@@ -2,10 +2,10 @@
 
 
 a = Analysis(
-    ['YouTube downloader.py'],
+    ['youtube_downloader/app.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('youtube_downloader/youtube_downloader.png', 'youtube_downloader')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

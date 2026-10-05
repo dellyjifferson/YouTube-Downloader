@@ -12,5 +12,5 @@ python -m PyInstaller \
   --onefile \
   --windowed \
   --name "YouTube-Downloader" \
-  --add-data "youtube_downloader.png:." \
-  "YouTube downloader.py"
+  --add-data "youtube_downloader/youtube_downloader.png:youtube_downloader" \
+  "youtube_downloader/app.py"

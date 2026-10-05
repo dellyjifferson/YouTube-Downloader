@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "youtube-downloader"
+version = "0.1.0"
+description = "A simple Tkinter app for downloading YouTube videos or audio"
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = ["yt-dlp"]
+authors = [
+  { name = "J. Jifferson Delly" },
+]
+license = { text = "Proprietary" }
+keywords = ["youtube", "downloader", "tkinter", "yt-dlp"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "License :: Other/Proprietary License",
+  "Operating System :: OS Independent",
+  "Topic :: Multimedia :: Video",
+  "Topic :: Internet :: WWW/HTTP",
+]
+
+[project.urls]
+Homepage = "https://dellyjifferson.engineer"
+
+[project.scripts]
+youtube_downloader = "youtube_downloader.app:main"
+youtube_downloader_update = "youtube_downloader.update_check:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["youtube_downloader*"]
+
+[tool.setuptools.package-data]
+youtube_downloader = ["youtube_downloader.png"]
