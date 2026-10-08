@@ -22,7 +22,7 @@ A simple and user-friendly GUI application to download videos or audio from YouT
 **On Linux (Ubuntu/Debian):**
 ```bash
 sudo apt-get update
-sudo apt-get install python3 python3-pip ffmpeg
+sudo apt-get install python3 python3-full python3-venv python3-pip ffmpeg
 ```
 
 **On macOS:**
@@ -36,9 +36,37 @@ brew install python ffmpeg
 
 ## Installation
 
-The easiest way to install this app from the repository is to clone the repo and install it locally.
+### Option 1: Install with pipx (recommended - works from any terminal)
 
-### Option 1: Install from the repository (recommended)
+1. Install pipx (if not already installed):
+   ```bash
+   sudo apt-get install pipx
+   ```
+
+2. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/youtube_downloader.git
+   cd youtube_downloader
+   ```
+
+3. Install the app:
+   ```bash
+   pipx install .
+   ```
+
+4. Launch the app from anywhere:
+   ```bash
+   youtube_downloader
+   ```
+
+5. Check for updates from anywhere:
+   ```bash
+   youtube_downloader_update
+   ```
+
+### Option 2: Install from the repository with venv
+
+If you prefer a traditional virtual environment approach:
 
 1. Clone the repository:
    ```bash
@@ -54,23 +82,30 @@ The easiest way to install this app from the repository is to clone the repo and
 
 3. Install the app:
    ```bash
-   pip install .
+   python -m pip install .
    ```
 
-4. Launch the app:
+4. Launch the app (while venv is active):
    ```bash
    youtube_downloader
    ```
 
-5. Check for updates:
+5. Check for updates (while venv is active):
    ```bash
    youtube_downloader_update
    ```
 
+### Option 3: Run directly from source without installing
+
 You can also run it directly without installing:
 
 ```bash
-python -m youtube_downloader
+git clone https://github.com/your-username/youtube_downloader.git
+cd youtube_downloader
+python -m venv .env
+source .env/bin/activate
+pip install yt-dlp
+python "YouTube downloader.py"
 ```
 
 ### Option 2: Install as a Debian package
@@ -124,6 +159,44 @@ py -3 -m venv .env
 pip install yt-dlp pyinstaller
 pyinstaller --clean --noconfirm --onefile --windowed --name "YouTube-Downloader" --add-data "youtube_downloader.png;." "YouTube downloader.py"
 .\dist\YouTube-Downloader.exe
+```
+
+## Development
+
+If you're modifying the code and want to test your changes:
+
+### Update after local changes
+
+After making changes to the code and pushing to your repository:
+
+1. **For quick testing during development** (from inside the repo):
+   ```bash
+   cd ~/Documents/youtube_downloader
+   pipx install --force .
+   ```
+   This reinstalls the app immediately with your latest changes.
+
+2. **Test the updated commands from anywhere**:
+   ```bash
+   youtube_downloader        # Launch the app
+   youtube_downloader_update # Check for updates
+   ```
+
+### Publishing updates
+
+Once you publish a new version to PyPI:
+
+```bash
+pipx upgrade youtube-downloader
+```
+
+### Alternative: Install from remote repository
+
+If you want to pull the latest version directly from your GitHub repository:
+
+```bash
+pipx uninstall youtube-downloader
+pipx install git+https://github.com/your-username/youtube_downloader.git
 ```
 
 ## Usage
