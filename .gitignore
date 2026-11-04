@@ -6,3 +6,6 @@ dist/
 .pyc
 .vscode/
 .venv/
+*.spec
+*.db
+.env

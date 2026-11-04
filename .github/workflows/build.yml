@@ -1,0 +1,52 @@
+name: Construire les exécutables
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # nécessaire pour créer la Release
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            fichier: YouTube-Downloader-Windows.exe
+          - os: macos-latest          # Mac à puce Apple (M1, M2…)
+            fichier: YouTube-Downloader-macOS.zip
+          - os: ubuntu-22.04          # ancienne version = compatible avec plus de distributions Linux
+            fichier: YouTube-Downloader-Linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Installer les dépendances
+        run: pip install -r requirements.txt pyinstaller pillow   # pillow : convertit l'icône en .ico / .icns
+      - name: Construire
+        # macOS : --onedir, car --onefile avec une application .app est déprécié par PyInstaller.
+        run: pyinstaller ${{ runner.os == 'macOS' && '--onedir' || '--onefile' }} --windowed --name YouTube-Downloader --icon youtube_downloader/assets/icone.png --add-data "youtube_downloader/assets/icone.png${{ runner.os == 'Windows' && ';' || ':' }}assets" "YouTube downloader.py"
+      - name: Préparer le fichier (Windows)
+        if: runner.os == 'Windows'
+        run: Move-Item dist/YouTube-Downloader.exe ${{ matrix.fichier }}
+      - name: Préparer le fichier (macOS)
+        if: runner.os == 'macOS'
+        run: ditto -c -k --keepParent dist/YouTube-Downloader.app ${{ matrix.fichier }}
+      - name: Préparer le fichier (Linux)
+        if: runner.os == 'Linux'
+        run: mv dist/YouTube-Downloader ${{ matrix.fichier }} && chmod +x ${{ matrix.fichier }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.fichier }}
+          path: ${{ matrix.fichier }}
+      - name: Publier dans la Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: ${{ matrix.fichier }}

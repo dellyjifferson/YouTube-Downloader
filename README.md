@@ -1,250 +1,96 @@
 # YouTube Downloader
 
-A simple and user-friendly GUI application to download videos or audio from YouTube, including playlist support.
+Enregistrez sur votre ordinateur une vidéo ou une playlist YouTube, en vidéo (MP4) ou en audio (MP3). **Aucune installation nécessaire.**
 
-## Features
+## [⬇️ Télécharger la dernière version](../../releases/latest)
 
-- **Video & Audio Downloads**: Download videos in best quality (mp4) or extract audio (mp3)
-- **Playlist Support**: Download entire playlists with automatic folder organization
-- **Custom Output Folder**: Choose where to save downloaded content
-- **Robust Downloading**: Built-in retries and longer network timeouts for reliable downloads
-- **Activity Log**: Real-time logging of download progress and status
-- **Cross-Platform**: Works on Linux and Windows
+Sur cette page, dans la partie **Assets**, prenez le fichier de votre système :
 
-## Requirements
+| Votre ordinateur | Fichier à télécharger |
+| --- | --- |
+| Windows | `YouTube-Downloader-Windows.exe` |
+| Mac à puce Apple (M1, M2…) | `YouTube-Downloader-macOS.zip` |
+| Linux | `YouTube-Downloader-Linux` |
 
-- Python 3.7 or higher
-- FFmpeg (for audio extraction)
-- pip (Python package manager)
+Le fichier pèse environ 100 Mo, car il contient tout ce qu'il faut pour fonctionner. L'ouverture peut prendre quelques secondes.
 
-### System Dependencies
+## Ouvrir l'application
 
-**On Linux (Ubuntu/Debian):**
-```bash
-sudo apt-get update
-sudo apt-get install python3 python3-full python3-venv python3-pip ffmpeg
-```
+### Windows
 
-**On macOS:**
-```bash
-brew install python ffmpeg
-```
+1. Téléchargez le fichier. Si le navigateur vous avertit, choisissez **… → Conserver**.
+2. Double-cliquez sur le fichier.
+3. Si le message « Windows a protégé votre ordinateur » s'affiche, cliquez sur **Informations complémentaires**, puis sur **Exécuter quand même**.
 
-**On Windows:**
-- Install Python from [python.org](https://www.python.org/downloads/)
-- Install FFmpeg from [ffmpeg.org](https://ffmpeg.org/download.html) or use: `choco install ffmpeg`
+### macOS (Mac à puce Apple uniquement)
 
-## Installation
+1. Téléchargez le fichier, puis double-cliquez dessus pour le décompresser.
+2. Glissez **YouTube-Downloader** dans le dossier **Applications**.
+3. Ouvrez l'application. Le premier lancement est bloqué par macOS :
+   - **macOS 14 et avant** : faites un clic droit sur l'application, puis **Ouvrir**, puis encore **Ouvrir**.
+   - **macOS 15 et après** : ouvrez **Réglages Système → Confidentialité et sécurité**, descendez en bas de la page et cliquez sur **Ouvrir quand même**.
 
-### Option 1: Install with pipx (recommended - works from any terminal)
+### Linux
 
-1. Install pipx (if not already installed):
-   ```bash
-   sudo apt-get install pipx
-   ```
+1. Rangez le fichier à son emplacement définitif (par exemple dans votre dossier personnel), car le raccourci du menu pointera vers cet endroit.
+2. Rendez-le exécutable : clic droit → **Propriétés → Permissions** → cochez **Autoriser l'exécution**. Vous pouvez aussi utiliser la commande `chmod +x YouTube-Downloader-Linux`.
+3. Double-cliquez dessus. L'application apparaît ensuite dans le menu des applications, et un raccourci avec son icône est créé sur le Bureau.
+4. Utilisez désormais ce raccourci : le fichier téléchargé garde une icône générique, car Linux ne permet pas d'en intégrer une dans un exécutable. Au premier clic, si le système demande une confirmation, choisissez **Lancer quand même** ou **Marquer comme exécutable**.
 
-2. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/youtube_downloader.git
-   cd youtube_downloader
-   ```
+## Pourquoi ces avertissements ?
 
-3. Install the app:
-   ```bash
-   pipx install .
-   ```
+L'application n'est pas signée, car la signature auprès de Microsoft et d'Apple est payante. Votre système ne connaît donc pas son auteur et préfère vous prévenir. Le code est public : vous pouvez le lire sur cette page.
 
-4. Launch the app from anywhere:
-   ```bash
-   youtube_downloader
-   ```
+## Utiliser l'application
 
-5. Check for updates from anywhere:
-   ```bash
-   youtube_downloader_update
-   ```
+1. Collez l'adresse de la vidéo ou de la playlist.
+2. Vérifiez le **dossier de destination** (par défaut, votre dossier de téléchargements).
+3. Choisissez **Vidéo** ou **Audio**.
+4. Pour une playlist, cochez **Cette adresse est une playlist**. Vous pouvez aussi lui donner un nom.
+5. Cliquez sur **Lancer le téléchargement** et suivez l'avancement dans le journal d'activité.
 
-### Option 2: Install from the repository with venv
+## Vos fichiers, les mises à jour et la désinstallation
 
-If you prefer a traditional virtual environment approach:
+- **Vos fichiers** : les vidéos et les musiques sont enregistrées dans le dossier que vous choisissez. L'application n'enregistre ni compte ni réglage.
+- **Mettre à jour** : téléchargez la dernière version et remplacez l'ancien fichier. Vos vidéos et vos musiques ne sont pas touchées. Si les téléchargements cessent de fonctionner, essayez d'abord cette mise à jour : YouTube change régulièrement son fonctionnement.
+- **Désinstaller** : supprimez le fichier de l'application (sur Mac, mettez l'application à la corbeille). Vos vidéos et vos musiques restent en place.
+- **Linux uniquement** : supprimez aussi le raccourci du Bureau. Pour retirer l'application du menu, supprimez ces deux fichiers :
+  - `~/.local/share/applications/youtube-downloader.desktop`
+  - `~/.local/share/icons/hicolor/512x512/apps/youtube-downloader.png`
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/youtube_downloader.git
-   cd youtube_downloader
-   ```
+## En cas de problème
 
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv .env
-   source .env/bin/activate
-   ```
+- **Le téléchargement échoue** : lisez le message dans le journal d'activité, vérifiez votre connexion et essayez d'abord une seule vidéo.
+- **« Certificate verify failed »** : il s'agit en général d'un problème de réseau. Essayez une autre connexion.
 
-3. Install the app:
-   ```bash
-   python -m pip install .
-   ```
+## Mention légale
 
-4. Launch the app (while venv is active):
-   ```bash
-   youtube_downloader
-   ```
+**Important** : cet outil est destiné à un usage légal, personnel et autorisé uniquement. Télécharger du contenu YouTube sans les droits, l'autorisation ou une base légale valable peut enfreindre les conditions de YouTube et le droit d'auteur applicable.
 
-5. Check for updates (while venv is active):
-   ```bash
-   youtube_downloader_update
-   ```
+Il vous appartient de vérifier que vous avez le droit de télécharger et d'utiliser chaque contenu. L'auteur n'approuve pas le téléchargement ni la redistribution non autorisés de contenus protégés.
 
-### Option 3: Run directly from source without installing
+## Pour les développeurs
 
-You can also run it directly without installing:
+Lancer depuis les sources (Tkinter doit être disponible, par exemple avec `sudo apt install python3-tk` sous Debian/Ubuntu) :
 
 ```bash
-git clone https://github.com/your-username/youtube_downloader.git
-cd youtube_downloader
-python -m venv .env
-source .env/bin/activate
-pip install yt-dlp
+python3 -m venv .venv
+source .venv/bin/activate        # Windows : .venv\Scripts\activate
+pip install -r requirements.txt
 python "YouTube downloader.py"
 ```
 
-### Option 2: Install as a Debian package
-
-If you want a system package on Debian/Ubuntu, build it from the repo:
+Publier une version : GitHub Actions construit les trois exécutables et les ajoute à la Release à chaque tag `v*`.
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y build-essential debhelper dh-python python3-all python3-setuptools python3-wheel python3-tk ffmpeg
-git clone https://github.com/your-username/youtube_downloader.git
-cd youtube_downloader
-dpkg-buildpackage -us -uc -b
-sudo dpkg -i ../youtube-downloader_0.1.0-1_all.deb
+git tag vX.Y && git push origin vX.Y
 ```
 
-Then run:
+yt-dlp est figé dans chaque exécutable : publiez une nouvelle version dès que YouTube casse les téléchargements.
 
-```bash
-youtube_downloader
-```
+## À propos
 
-### Option 3: Run directly from source
-
-If you only want to run the project from the repo without installing it:
-
-```bash
-git clone https://github.com/your-username/youtube_downloader.git
-cd youtube_downloader
-python -m venv .env
-source .env/bin/activate
-pip install yt-dlp
-python "YouTube downloader.py"
-```
-
-### Option 4: Build a standalone executable
-
-#### Linux
-```bash
-python -m venv .env
-source .env/bin/activate
-pip install yt-dlp pyinstaller
-chmod +x build_linux_executable.sh
-./build_linux_executable.sh
-./dist/YouTube-Downloader
-```
-
-#### Windows
-```powershell
-py -3 -m venv .env
-.\.env\Scripts\activate
-pip install yt-dlp pyinstaller
-pyinstaller --clean --noconfirm --onefile --windowed --name "YouTube-Downloader" --add-data "youtube_downloader.png;." "YouTube downloader.py"
-.\dist\YouTube-Downloader.exe
-```
-
-## Development
-
-If you're modifying the code and want to test your changes:
-
-### Update after local changes
-
-After making changes to the code and pushing to your repository:
-
-1. **For quick testing during development** (from inside the repo):
-   ```bash
-   cd ~/Documents/youtube_downloader
-   pipx install --force .
-   ```
-   This reinstalls the app immediately with your latest changes.
-
-2. **Test the updated commands from anywhere**:
-   ```bash
-   youtube_downloader        # Launch the app
-   youtube_downloader_update # Check for updates
-   ```
-
-### Publishing updates
-
-Once you publish a new version to PyPI:
-
-```bash
-pipx upgrade youtube-downloader
-```
-
-### Alternative: Install from remote repository
-
-If you want to pull the latest version directly from your GitHub repository:
-
-```bash
-pipx uninstall youtube-downloader
-pipx install git+https://github.com/your-username/youtube_downloader.git
-```
-
-## Usage
-
-1. **Enter a URL**: Paste a YouTube video or playlist URL
-2. **Select Output Folder**: Click "Browse" to choose where files will be saved
-3. **Choose Download Type**:
-   - Select "Video" to download video files (mp4)
-   - Select "Audio" to download and convert to audio (mp3)
-4. **Playlist Option** (Optional):
-   - Check "Treat URL as playlist" if downloading multiple videos
-   - Optionally specify a custom playlist folder name
-5. **Start Download**: Click "Start Download" button
-6. **Monitor Progress**: Watch the activity log for real-time status
-
-## Legal Notice
-
-**Important**: This tool is provided for lawful, personal, and authorized use only. Downloading YouTube content without proper rights, permission, or a valid legal basis may violate YouTube's Terms of Service and applicable copyright laws.
-
-You are responsible for:
-- Ensuring you have the right to download and use the content
-- Complying with local laws and regulations
-- Respecting copyright and intellectual property rights
-
-The author does not endorse unauthorized downloading or redistribution of protected content.
-
-## Project Information
-
-- **Author**: J. Jifferson Delly
-- **Portfolio**: https://dellyjifferson.engineer
-- **Built with**: Python, Tkinter, yt-dlp
-
-## Troubleshooting
-
-**Issue: "FFmpeg not found"**
-- Make sure FFmpeg is installed and added to your system PATH
-
-**Issue: "Certificate verify failed"**
-- This is usually a network/SSL issue. Try updating certificates or checking your internet connection
-
-**Issue: Download fails after starting**
-- Check the activity log for specific error messages
-- Ensure the output folder has write permissions
-- Try downloading a single video first before attempting playlists
-
-**Issue: Windows Defender warns about the executable**
-- This is common for unsigned executables. It's safe if built from source. To reduce warnings, obtain a code-signing certificate.
-
-## License
-
-This project is provided as-is for personal use.
+- **Auteur** : J. Jifferson Delly
+- **Portfolio** : https://dellyjifferson.engineer
+- **Réalisé avec** : Python, Tkinter, yt-dlp, FFmpeg (via imageio-ffmpeg)
+- **Licence** : voir le fichier [LICENSE](LICENSE)

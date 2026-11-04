@@ -37,4 +37,4 @@ include-package-data = true
 include = ["youtube_downloader*"]
 
 [tool.setuptools.package-data]
-youtube_downloader = ["youtube_downloader.png"]
+youtube_downloader = ["assets/icone.png"]

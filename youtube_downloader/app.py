@@ -2,6 +2,7 @@ import argparse
 import os
 import queue
 import re
+import shutil
 import sys
 import threading
 import tkinter as tk
@@ -9,7 +10,15 @@ from tkinter import filedialog, messagebox, scrolledtext, ttk
 
 import yt_dlp
 
+try:
+    import imageio_ffmpeg
+except ImportError:
+    imageio_ffmpeg = None
+
 from .update_check import main as check_updates
+
+APP_NAME = "YouTube-Downloader"
+ICON_RESOURCE = "assets/icone.png"
 
 
 def sanitize_folder_name(name):
@@ -26,6 +35,15 @@ def build_output_template(output_dir, is_playlist, playlist_name):
     return os.path.join(output_dir, "%(title)s.%(ext)s")
 
 
+def find_bundled_ffmpeg():
+    if imageio_ffmpeg is None:
+        return None
+    try:
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except RuntimeError:
+        return None
+
+
 def build_ydl_options(output_dir, is_playlist, playlist_name, media_type, logger_callback):
     outtmpl = build_output_template(output_dir, is_playlist, playlist_name)
     common_options = {
@@ -39,6 +57,10 @@ def build_ydl_options(output_dir, is_playlist, playlist_name, media_type, logger
         "ignoreerrors": False,
         "windowsfilenames": True,
     }
+
+    ffmpeg_path = find_bundled_ffmpeg()
+    if ffmpeg_path:
+        common_options["ffmpeg_location"] = ffmpeg_path
 
     if media_type == "audio":
         common_options.update(
@@ -69,6 +91,85 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
+def default_output_dir():
+    home = os.path.expanduser("~")
+    for name in ("Downloads", "Téléchargements"):
+        candidate = os.path.join(home, name)
+        if os.path.isdir(candidate):
+            return candidate
+    return home
+
+
+def find_desktop_folder():
+    home = os.path.expanduser("~")
+    for name in ("Desktop", "Bureau"):
+        candidate = os.path.join(home, name)
+        if os.path.isdir(candidate):
+            return candidate
+    return None
+
+
+def desktop_exec_value(path):
+    # Spécification Desktop Entry : règle de citation de Exec, puis échappement
+    # des chaînes (les antislashs sont donc doublés deux fois).
+    quoted = re.sub(r'(["`$\\])', r"\\\1", path)
+    return '"' + quoted.replace("\\", "\\\\").replace("%", "%%") + '"'
+
+
+def write_if_changed(path, content):
+    try:
+        with open(path, "rb") as existing:
+            if existing.read() == content:
+                return
+    except FileNotFoundError:
+        pass
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "wb") as target:
+        target.write(content)
+
+
+def install_linux_launcher():
+    if not (getattr(sys, "frozen", False) and sys.platform.startswith("linux")):
+        return
+
+    # L'application doit démarrer même si le lanceur ne peut pas être installé.
+    try:
+        data_home = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+        icon_path = os.path.join(data_home, "icons", "hicolor", "512x512", "apps", "youtube-downloader.png")
+        with open(resource_path(ICON_RESOURCE), "rb") as icon_file:
+            write_if_changed(icon_path, icon_file.read())
+
+        entry = "\n".join(
+            [
+                "[Desktop Entry]",
+                "Type=Application",
+                "Name=YouTube Downloader",
+                "Comment=Télécharger des vidéos ou de l'audio depuis YouTube",
+                f"Exec={desktop_exec_value(sys.executable)}",
+                "Icon=" + icon_path.replace("\\", "\\\\"),
+                "Terminal=false",
+                "Categories=Network;",
+                # Tk normalise la classe de fenêtre : « Youtube-downloader ».
+                f"StartupWMClass={APP_NAME.capitalize()}",
+                "",
+            ]
+        )
+        menu_path = os.path.join(data_home, "applications", "youtube-downloader.desktop")
+        first_launch = not os.path.exists(menu_path)
+        write_if_changed(menu_path, entry.encode("utf-8"))
+
+        # Un exécutable Linux ne contient pas d'icône : seul un lanceur peut en afficher une.
+        # Créé au premier lancement seulement, pour ne pas revenir si la personne le supprime.
+        desktop_folder = find_desktop_folder()
+        if desktop_folder:
+            shortcut_path = os.path.join(desktop_folder, "youtube-downloader.desktop")
+            if first_launch or os.path.exists(shortcut_path):
+                write_if_changed(shortcut_path, entry.encode("utf-8"))
+                os.chmod(shortcut_path, 0o755)
+    except (OSError, ValueError):
+        pass
+
+
 def create_fallback_icon(root):
     icon = tk.PhotoImage(width=32, height=32)
     icon.put("#0f172a", to=(0, 0, 32, 32))
@@ -81,7 +182,7 @@ def create_fallback_icon(root):
 
 
 def create_app_icon(root):
-    icon_path = resource_path("youtube_downloader.png")
+    icon_path = resource_path(ICON_RESOURCE)
     try:
         icon = tk.PhotoImage(file=icon_path)
         root.iconphoto(True, icon)
@@ -108,7 +209,7 @@ class InfoWindow(tk.Toplevel):
         text.insert(tk.END, "\n\n".join(body_lines))
         text.configure(state=tk.DISABLED)
 
-        ttk.Button(frame, text="Close", command=self.destroy).pack(anchor="e", pady=(12, 0))
+        ttk.Button(frame, text="Fermer", command=self.destroy).pack(anchor="e", pady=(12, 0))
 
         self.update_idletasks()
         parent_x = parent.winfo_rootx()
@@ -124,18 +225,18 @@ class InfoWindow(tk.Toplevel):
 
 def build_terms_text():
     return [
-        "This tool is provided for lawful, personal, and authorized use only.",
-        "Downloading YouTube content without the rights, permission, or a valid legal basis may violate YouTube's terms and applicable copyright law.",
-        "You are responsible for confirming that you have the right to download, store, and use any content processed by this application.",
-        "The author does not endorse unauthorized downloading or redistribution of protected content.",
+        "Cet outil est destiné à un usage légal, personnel et autorisé uniquement.",
+        "Télécharger du contenu YouTube sans les droits, l'autorisation ou une base légale valable peut enfreindre les conditions de YouTube et le droit d'auteur applicable.",
+        "Il vous appartient de vérifier que vous avez le droit de télécharger, de conserver et d'utiliser tout contenu traité par cette application.",
+        "L'auteur n'approuve pas le téléchargement ni la redistribution non autorisés de contenus protégés.",
     ]
 
 
 def build_about_text():
     return [
-        "Author: J. Jifferson Delly",
-        "Portfolio: https://dellyjifferson.engineer",
-        "A small Tkinter-based downloader for saving videos or audio with yt-dlp.",
+        "Auteur : J. Jifferson Delly",
+        "Portfolio : https://dellyjifferson.engineer",
+        "Un petit outil Tkinter pour enregistrer des vidéos ou de l'audio avec yt-dlp.",
     ]
 
 
@@ -152,11 +253,11 @@ class YouTubeDownloaderApp:
         self.download_thread = None
 
         self.url_var = tk.StringVar(value="")
-        self.output_dir_var = tk.StringVar(value=os.getcwd())
+        self.output_dir_var = tk.StringVar(value=default_output_dir())
         self.playlist_var = tk.BooleanVar(value=False)
         self.playlist_name_var = tk.StringVar()
         self.media_type_var = tk.StringVar(value="video")
-        self.status_var = tk.StringVar(value="Ready")
+        self.status_var = tk.StringVar(value="Prêt")
 
         self._build_ui()
         self._set_playlist_state()
@@ -165,9 +266,9 @@ class YouTubeDownloaderApp:
     def _build_ui(self):
         menu_bar = tk.Menu(self.root)
         help_menu = tk.Menu(menu_bar, tearoff=False)
-        help_menu.add_command(label="About", command=self.show_about)
-        help_menu.add_command(label="Terms and Conditions", command=self.show_terms)
-        menu_bar.add_cascade(label="Help", menu=help_menu)
+        help_menu.add_command(label="À propos", command=self.show_about)
+        help_menu.add_command(label="Conditions d'utilisation", command=self.show_terms)
+        menu_bar.add_cascade(label="Aide", menu=help_menu)
         self.root.config(menu=menu_bar)
 
         container = ttk.Frame(self.root, padding=18)
@@ -178,7 +279,7 @@ class YouTubeDownloaderApp:
 
         subtitle = ttk.Label(
             container,
-            text="Download a single video or a playlist as video or audio, with retries and a longer network timeout.",
+            text="Téléchargez une vidéo ou une playlist, en vidéo ou en audio, avec de nouvelles tentatives automatiques en cas de coupure réseau.",
             wraplength=720,
         )
         subtitle.pack(anchor="w", pady=(0, 16))
@@ -186,7 +287,7 @@ class YouTubeDownloaderApp:
         form = ttk.Frame(container)
         form.pack(fill=tk.X)
 
-        self._add_labeled_entry(form, "Video or playlist URL", self.url_var, row=0)
+        self._add_labeled_entry(form, "Adresse (URL) de la vidéo ou de la playlist", self.url_var, row=0)
         self._add_output_picker(form, row=1)
         self._add_playlist_controls(form, row=2)
         self._add_media_controls(form, row=3)
@@ -194,12 +295,12 @@ class YouTubeDownloaderApp:
         actions = ttk.Frame(container)
         actions.pack(fill=tk.X, pady=(8, 10))
 
-        self.download_button = ttk.Button(actions, text="Start Download", command=self.start_download)
+        self.download_button = ttk.Button(actions, text="Lancer le téléchargement", command=self.start_download)
         self.download_button.pack(side=tk.LEFT)
 
-        ttk.Button(actions, text="Clear Log", command=self.clear_log).pack(side=tk.LEFT, padx=(8, 0))
-        ttk.Button(actions, text="Terms", command=self.show_terms).pack(side=tk.RIGHT)
-        ttk.Button(actions, text="About", command=self.show_about).pack(side=tk.RIGHT, padx=(0, 8))
+        ttk.Button(actions, text="Effacer le journal", command=self.clear_log).pack(side=tk.LEFT, padx=(8, 0))
+        ttk.Button(actions, text="Conditions", command=self.show_terms).pack(side=tk.RIGHT)
+        ttk.Button(actions, text="À propos", command=self.show_about).pack(side=tk.RIGHT, padx=(0, 8))
 
         self.progress = ttk.Progressbar(container, mode="indeterminate")
         self.progress.pack(fill=tk.X, pady=(6, 6))
@@ -209,7 +310,7 @@ class YouTubeDownloaderApp:
 
         ttk.Label(status_row, textvariable=self.status_var).pack(anchor="w")
 
-        log_label = ttk.Label(container, text="Activity log")
+        log_label = ttk.Label(container, text="Journal d'activité")
         log_label.pack(anchor="w", pady=(14, 4))
 
         self.log_widget = scrolledtext.ScrolledText(container, height=16, wrap=tk.WORD, state=tk.DISABLED)
@@ -226,12 +327,12 @@ class YouTubeDownloaderApp:
     def _add_output_picker(self, parent, row):
         frame = ttk.Frame(parent)
         frame.grid(row=row, column=0, sticky="ew", pady=6)
-        ttk.Label(frame, text="Output folder").pack(anchor="w")
+        ttk.Label(frame, text="Dossier de destination").pack(anchor="w")
 
         picker = ttk.Frame(frame)
         picker.pack(fill=tk.X, pady=(4, 0))
         ttk.Entry(picker, textvariable=self.output_dir_var).pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Button(picker, text="Browse", command=self.choose_output_folder).pack(side=tk.LEFT, padx=(8, 0))
+        ttk.Button(picker, text="Parcourir", command=self.choose_output_folder).pack(side=tk.LEFT, padx=(8, 0))
 
     def _add_playlist_controls(self, parent, row):
         frame = ttk.Frame(parent)
@@ -239,19 +340,19 @@ class YouTubeDownloaderApp:
 
         ttk.Checkbutton(
             frame,
-            text="Treat URL as playlist",
+            text="Cette adresse est une playlist",
             variable=self.playlist_var,
             command=self._set_playlist_state,
         ).pack(anchor="w")
 
         playlist_row = ttk.Frame(frame)
         playlist_row.pack(fill=tk.X, pady=(6, 0))
-        ttk.Label(playlist_row, text="Playlist name").pack(anchor="w")
+        ttk.Label(playlist_row, text="Nom de la playlist").pack(anchor="w")
         self.playlist_entry = ttk.Entry(playlist_row, textvariable=self.playlist_name_var)
         self.playlist_entry.pack(fill=tk.X, pady=(4, 0))
         ttk.Label(
             playlist_row,
-            text="Leave this blank to use the playlist title from YouTube.",
+            text="Laissez vide pour utiliser le titre de la playlist sur YouTube.",
             foreground="#555555",
         ).pack(anchor="w", pady=(4, 0))
 
@@ -259,10 +360,10 @@ class YouTubeDownloaderApp:
         frame = ttk.Frame(parent)
         frame.grid(row=row, column=0, sticky="ew", pady=6)
 
-        ttk.Label(frame, text="Download type").pack(anchor="w")
+        ttk.Label(frame, text="Type de téléchargement").pack(anchor="w")
         options = ttk.Frame(frame)
         options.pack(anchor="w", pady=(4, 0))
-        ttk.Radiobutton(options, text="Video", value="video", variable=self.media_type_var).pack(side=tk.LEFT)
+        ttk.Radiobutton(options, text="Vidéo", value="video", variable=self.media_type_var).pack(side=tk.LEFT)
         ttk.Radiobutton(options, text="Audio", value="audio", variable=self.media_type_var).pack(side=tk.LEFT, padx=(14, 0))
 
     def _set_playlist_state(self):
@@ -270,7 +371,7 @@ class YouTubeDownloaderApp:
         self.playlist_entry.configure(state=state)
 
     def choose_output_folder(self):
-        folder = filedialog.askdirectory(initialdir=self.output_dir_var.get() or os.getcwd())
+        folder = filedialog.askdirectory(initialdir=self.output_dir_var.get() or default_output_dir())
         if folder:
             self.output_dir_var.set(folder)
 
@@ -280,10 +381,10 @@ class YouTubeDownloaderApp:
         self.log_widget.configure(state=tk.DISABLED)
 
     def show_terms(self):
-        InfoWindow(self.root, "Terms and Conditions", build_terms_text())
+        InfoWindow(self.root, "Conditions d'utilisation", build_terms_text())
 
     def show_about(self):
-        InfoWindow(self.root, "About", build_about_text())
+        InfoWindow(self.root, "À propos", build_about_text())
 
     def log(self, message):
         self.message_queue.put(("log", message))
@@ -302,21 +403,21 @@ class YouTubeDownloaderApp:
             percent = (downloaded / total * 100) if total else 0
             speed = data.get("speed")
             eta = data.get("eta")
-            speed_text = f"{speed / 1024 / 1024:.2f} MB/s" if speed else "unknown speed"
-            eta_text = f"{eta}s" if eta is not None else "unknown ETA"
+            speed_text = f"{speed / 1024 / 1024:.2f} Mo/s" if speed else "vitesse inconnue"
+            eta_text = f"{eta}s" if eta is not None else "durée inconnue"
             self.message_queue.put(
                 (
                     "status",
-                    f"Downloading: {percent:.1f}% - {speed_text} - ETA {eta_text}",
+                    f"Téléchargement : {percent:.1f} % - {speed_text} - temps restant : {eta_text}",
                 )
             )
         elif status == "finished":
             filename = data.get("filename", "download")
-            self.message_queue.put(("log", f"Finished downloading {filename}"))
+            self.message_queue.put(("log", f"Téléchargement terminé : {filename}"))
 
     def start_download(self):
         if self.download_thread and self.download_thread.is_alive():
-            messagebox.showinfo("Download in progress", "A download is already running.")
+            messagebox.showinfo("Téléchargement en cours", "Un téléchargement est déjà en cours.")
             return
 
         url = self.url_var.get().strip()
@@ -326,19 +427,19 @@ class YouTubeDownloaderApp:
         media_type = self.media_type_var.get()
 
         if not url:
-            messagebox.showerror("Missing URL", "Please enter a YouTube video or playlist URL.")
+            messagebox.showerror("Adresse manquante", "Veuillez saisir l'adresse d'une vidéo ou d'une playlist YouTube.")
             return
 
         if not output_dir:
-            messagebox.showerror("Missing output folder", "Please choose where the files should be saved.")
+            messagebox.showerror("Dossier manquant", "Veuillez choisir où enregistrer les fichiers.")
             return
 
         os.makedirs(output_dir, exist_ok=True)
 
         self.download_button.configure(state=tk.DISABLED)
         self.progress.start(10)
-        self.status_var.set("Starting download...")
-        self.log(f"Starting {media_type} download for {'playlist' if is_playlist else 'video'} URL")
+        self.status_var.set("Démarrage du téléchargement...")
+        self.log(f"Démarrage du téléchargement ({'audio' if media_type == 'audio' else 'vidéo'}, {'playlist' if is_playlist else 'élément unique'})")
 
         self.download_thread = threading.Thread(
             target=self._download_worker,
@@ -349,11 +450,11 @@ class YouTubeDownloaderApp:
 
     def _download_worker(self, url, output_dir, is_playlist, playlist_name, media_type):
         try:
-            self.message_queue.put(("status", "Analyzing video and starting download... This may take a moment."))
+            self.message_queue.put(("status", "Analyse de la vidéo et démarrage... Cela peut prendre un moment."))
             options = build_ydl_options(output_dir, is_playlist, playlist_name, media_type, self._progress_hook)
             with yt_dlp.YoutubeDL(options) as downloader:
                 downloader.download([url])
-            self.message_queue.put(("done", f"Download completed successfully and saved to {output_dir}"))
+            self.message_queue.put(("done", f"Téléchargement réussi, fichiers enregistrés dans {output_dir}"))
         except Exception as exc:
             self.message_queue.put(("error", str(exc)))
 
@@ -368,15 +469,15 @@ class YouTubeDownloaderApp:
                 elif kind == "done":
                     self.progress.stop()
                     self.download_button.configure(state=tk.NORMAL)
-                    self.status_var.set("Done")
+                    self.status_var.set("Terminé")
                     self._append_log(payload)
-                    messagebox.showinfo("Success", payload)
+                    messagebox.showinfo("Réussite", payload)
                 elif kind == "error":
                     self.progress.stop()
                     self.download_button.configure(state=tk.NORMAL)
-                    self.status_var.set("Failed")
-                    self._append_log(f"Error: {payload}")
-                    messagebox.showerror("Download failed", payload)
+                    self.status_var.set("Échec")
+                    self._append_log(f"Erreur : {payload}")
+                    messagebox.showerror("Échec du téléchargement", payload)
         except queue.Empty:
             pass
         finally:
@@ -392,7 +493,8 @@ def main(argv=None):
         check_updates()
         return
 
-    root = tk.Tk()
+    install_linux_launcher()
+    root = tk.Tk(className=APP_NAME)
     app = YouTubeDownloaderApp(root)
     root.mainloop()
 
