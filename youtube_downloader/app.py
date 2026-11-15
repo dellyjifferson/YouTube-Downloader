@@ -3,6 +3,7 @@ import os
 import queue
 import re
 import shutil
+import subprocess
 import sys
 import threading
 import tkinter as tk
@@ -128,13 +129,37 @@ def write_if_changed(path, content):
         target.write(content)
 
 
-def install_linux_launcher():
-    if not (getattr(sys, "frozen", False) and sys.platform.startswith("linux")):
-        return
+def same_file(first, second):
+    if os.path.getsize(first) != os.path.getsize(second):
+        return False
+    with open(first, "rb") as a, open(second, "rb") as b:
+        return a.read() == b.read()
 
-    # L'application doit démarrer même si le lanceur ne peut pas être installé.
+
+def install_copy(source, target):
+    # Copie dans un fichier temporaire puis remplacement : une nouvelle version téléchargée
+    # remplace l'ancienne, même si celle-ci est ouverte (sauf sous Windows, qui la verrouille).
+    if os.path.normcase(source) == os.path.normcase(target):
+        return
+    if os.path.exists(target) and same_file(source, target):
+        return
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+    temporary = target + ".tmp"
+    shutil.copyfile(source, temporary)
+    os.chmod(temporary, 0o755)
+    os.replace(temporary, target)
+
+
+def install_linux_launcher():
+    # L'exécutable se copie dans ~/.local/share/YouTube-Downloader et les lanceurs pointent vers
+    # cette copie : le fichier téléchargé (ou le dossier du projet) peut ensuite être supprimé.
     try:
         data_home = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+        installed = os.path.join(data_home, APP_NAME, APP_NAME)
+        try:
+            install_copy(os.path.realpath(sys.executable), installed)
+        except OSError:
+            installed = os.path.realpath(sys.executable)  # copie impossible : on garde le fichier lancé
         icon_path = os.path.join(data_home, "icons", "hicolor", "512x512", "apps", "youtube-downloader.png")
         with open(resource_path(ICON_RESOURCE), "rb") as icon_file:
             write_if_changed(icon_path, icon_file.read())
@@ -145,7 +170,7 @@ def install_linux_launcher():
                 "Type=Application",
                 "Name=YouTube Downloader",
                 "Comment=Télécharger des vidéos ou de l'audio depuis YouTube",
-                f"Exec={desktop_exec_value(sys.executable)}",
+                f"Exec={desktop_exec_value(installed)}",
                 "Icon=" + icon_path.replace("\\", "\\\\"),
                 "Terminal=false",
                 "Categories=Network;",
@@ -167,6 +192,93 @@ def install_linux_launcher():
                 write_if_changed(shortcut_path, entry.encode("utf-8"))
                 os.chmod(shortcut_path, 0o755)
     except (OSError, ValueError):
+        pass
+
+
+def powershell_path(path):
+    # Chemin entre apostrophes dans PowerShell : l'apostrophe se double.
+    return str(path).replace("'", "''")
+
+
+def install_windows():
+    # Copie dans %LOCALAPPDATA%\Programs (emplacement des logiciels installés sans droits
+    # administrateur), raccourci dans le menu Démarrer (recréé s'il manque) et sur le Bureau
+    # (première installation seulement, pour ne pas revenir si la personne le supprime).
+    source = os.path.realpath(sys.executable)
+    installed = os.path.join(os.environ["LOCALAPPDATA"], "Programs", APP_NAME, APP_NAME + ".exe")
+    first_install = not os.path.exists(installed)
+    try:
+        install_copy(source, installed)
+    except OSError:
+        if first_install:
+            return
+    start_menu = os.path.join(os.environ["APPDATA"], "Microsoft", "Windows", "Start Menu", "Programs",
+                              "YouTube Downloader.lnk")
+    shortcuts = [] if os.path.exists(start_menu) else [f"'{powershell_path(start_menu)}'"]
+    if first_install:
+        shortcuts.append("(Join-Path ([Environment]::GetFolderPath('Desktop')) 'YouTube Downloader.lnk')")
+    if not shortcuts:
+        return
+    script = "$w = New-Object -ComObject WScript.Shell; " + "".join(
+        f"$s = $w.CreateShortcut({shortcut}); $s.TargetPath = '{powershell_path(installed)}'; "
+        f"$s.WorkingDirectory = '{powershell_path(os.path.dirname(installed))}'; "
+        f"$s.IconLocation = '{powershell_path(installed)},0'; "
+        "$s.Description = 'Télécharger des vidéos ou de l''audio depuis YouTube'; $s.Save(); "
+        for shortcut in shortcuts
+    )
+    subprocess.run(
+        ["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
+        capture_output=True, timeout=30, creationflags=subprocess.CREATE_NO_WINDOW,
+    )
+
+
+def bundle_fingerprint(bundle):
+    # Une application .app construite en --onedir est un dossier : on compare la liste
+    # de ses fichiers avec leur taille et leur date (ditto conserve les dates).
+    entries = []
+    for folder, _, files in os.walk(bundle):
+        for name in files:
+            path = os.path.join(folder, name)
+            info = os.lstat(path)
+            entries.append((os.path.relpath(path, bundle), info.st_size, int(info.st_mtime)))
+    return sorted(entries)
+
+
+def install_macos():
+    # Copie l'application dans ~/Applications si elle a été lancée depuis ailleurs (Téléchargements…) :
+    # Spotlight et le Launchpad la trouvent, et le fichier téléchargé peut être supprimé.
+    executable = os.path.realpath(sys.executable)  # .../YouTube-Downloader.app/Contents/MacOS/...
+    bundle = os.path.dirname(os.path.dirname(os.path.dirname(executable)))
+    if not bundle.endswith(".app"):
+        return
+    applications = os.path.expanduser("~/Applications")
+    if os.path.dirname(bundle) in ("/Applications", applications):
+        return  # déjà rangée dans un dossier d'applications
+    target = os.path.join(applications, os.path.basename(bundle))
+    if os.path.isdir(target) and bundle_fingerprint(target) == bundle_fingerprint(bundle):
+        return  # cette version est déjà installée
+    os.makedirs(applications, exist_ok=True)
+    temporary = target + ".tmp"
+    shutil.rmtree(temporary, ignore_errors=True)
+    subprocess.run(["ditto", bundle, temporary], check=True, capture_output=True, timeout=300)
+    # La personne a déjà accepté d'ouvrir l'application : la copie ne doit pas redemander.
+    subprocess.run(["xattr", "-dr", "com.apple.quarantine", temporary], capture_output=True, timeout=60)
+    shutil.rmtree(target, ignore_errors=True)
+    os.rename(temporary, target)
+
+
+def install_app():
+    # Seulement pour l'exécutable. L'application doit démarrer même si l'installation échoue.
+    if not getattr(sys, "frozen", False):
+        return
+    try:
+        if sys.platform.startswith("linux"):
+            install_linux_launcher()
+        elif sys.platform == "win32":
+            install_windows()
+        elif sys.platform == "darwin":
+            install_macos()
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError):
         pass
 
 
@@ -493,7 +605,7 @@ def main(argv=None):
         check_updates()
         return
 
-    install_linux_launcher()
+    install_app()
     root = tk.Tk(className=APP_NAME)
     app = YouTubeDownloaderApp(root)
     root.mainloop()

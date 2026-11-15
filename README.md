@@ -21,20 +21,23 @@ Le fichier pèse environ 100 Mo, car il contient tout ce qu'il faut pour fonctio
 1. Téléchargez le fichier. Si le navigateur vous avertit, choisissez **… → Conserver**.
 2. Double-cliquez sur le fichier.
 3. Si le message « Windows a protégé votre ordinateur » s'affiche, cliquez sur **Informations complémentaires**, puis sur **Exécuter quand même**.
+4. Dès ce premier lancement, l'application **s'installe** : elle apparaît dans le **menu Démarrer** (tapez « YouTube Downloader » dans la recherche) et un raccourci est créé sur le **Bureau**.
+5. Vous pouvez ensuite **supprimer le fichier téléchargé** : l'application installée reste.
 
 ### macOS (Mac à puce Apple uniquement)
 
 1. Téléchargez le fichier, puis double-cliquez dessus pour le décompresser.
-2. Glissez **YouTube-Downloader** dans le dossier **Applications**.
-3. Ouvrez l'application. Le premier lancement est bloqué par macOS :
+2. Ouvrez **YouTube-Downloader**. Le premier lancement est bloqué par macOS :
    - **macOS 14 et avant** : faites un clic droit sur l'application, puis **Ouvrir**, puis encore **Ouvrir**.
    - **macOS 15 et après** : ouvrez **Réglages Système → Confidentialité et sécurité**, descendez en bas de la page et cliquez sur **Ouvrir quand même**.
+3. Dès ce premier lancement, l'application **s'installe** dans le dossier **Applications** de votre compte (`~/Applications`) : Spotlight (⌘ + Espace) et le Launchpad la trouvent. Si vous l'avez déjà glissée dans **Applications**, elle n'est pas copiée.
+4. Vous pouvez ensuite **supprimer le fichier téléchargé** et le `.zip`.
 
 ### Linux
 
-1. Rangez le fichier à son emplacement définitif (par exemple dans votre dossier personnel), car le raccourci du menu pointera vers cet endroit.
-2. Rendez-le exécutable : clic droit → **Propriétés → Permissions** → cochez **Autoriser l'exécution**. Vous pouvez aussi utiliser la commande `chmod +x YouTube-Downloader-Linux`.
-3. Double-cliquez dessus. L'application apparaît ensuite dans le menu des applications, et un raccourci avec son icône est créé sur le Bureau.
+1. Rendez-le exécutable : clic droit → **Propriétés → Permissions** → cochez **Autoriser l'exécution**. Vous pouvez aussi utiliser la commande `chmod +x YouTube-Downloader-Linux`.
+2. Double-cliquez dessus. L'application **s'installe** dans `~/.local/share/YouTube-Downloader` : elle apparaît dans le menu des applications, et un raccourci avec son icône est créé sur le Bureau.
+3. Vous pouvez ensuite **supprimer le fichier téléchargé** : l'application installée reste.
 4. Utilisez désormais ce raccourci : le fichier téléchargé garde une icône générique, car Linux ne permet pas d'en intégrer une dans un exécutable. Au premier clic, si le système demande une confirmation, choisissez **Lancer quand même** ou **Marquer comme exécutable**.
 
 ## Pourquoi ces avertissements ?
@@ -52,11 +55,13 @@ L'application n'est pas signée, car la signature auprès de Microsoft et d'Appl
 ## Vos fichiers, les mises à jour et la désinstallation
 
 - **Vos fichiers** : les vidéos et les musiques sont enregistrées dans le dossier que vous choisissez. L'application n'enregistre ni compte ni réglage.
-- **Mettre à jour** : téléchargez la dernière version et remplacez l'ancien fichier. Vos vidéos et vos musiques ne sont pas touchées. Si les téléchargements cessent de fonctionner, essayez d'abord cette mise à jour : YouTube change régulièrement son fonctionnement.
-- **Désinstaller** : supprimez le fichier de l'application (sur Mac, mettez l'application à la corbeille). Vos vidéos et vos musiques restent en place.
-- **Linux uniquement** : supprimez aussi le raccourci du Bureau. Pour retirer l'application du menu, supprimez ces deux fichiers :
-  - `~/.local/share/applications/youtube-downloader.desktop`
-  - `~/.local/share/icons/hicolor/512x512/apps/youtube-downloader.png`
+- **Mettre à jour** : téléchargez la dernière version et lancez-la une fois : elle remplace la version installée (sous Windows, fermez d'abord l'application si elle est ouverte). Vos vidéos et vos musiques ne sont pas touchées. Si les téléchargements cessent de fonctionner, essayez d'abord cette mise à jour : YouTube change régulièrement son fonctionnement.
+- **Désinstaller** (vos vidéos et vos musiques restent en place) :
+  - **Windows** : supprimez le dossier `%LOCALAPPDATA%\Programs\YouTube-Downloader`, puis les raccourcis « YouTube Downloader » du Bureau et du menu Démarrer.
+  - **macOS** : mettez **YouTube-Downloader** (dans `~/Applications` ou `Applications`) à la corbeille.
+  - **Linux** : supprimez le dossier `~/.local/share/YouTube-Downloader`, le raccourci du Bureau et ces deux fichiers :
+    - `~/.local/share/applications/youtube-downloader.desktop`
+    - `~/.local/share/icons/hicolor/512x512/apps/youtube-downloader.png`
 
 ## En cas de problème
 
